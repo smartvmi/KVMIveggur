@@ -1,0 +1,230 @@
+From faddc2a12cee9d4fa2710a0a1f6f371b12d3ea2c Mon Sep 17 00:00:00 2001
+From: "td@sec.uni-passau.de" <Thomas Dangl>
+Date: Fri, 28 May 2021 12:26:30 +0000
+Subject: [PATCH] Removed superflous libvirt dependency from KVM driver
+
+---
+ libvmi/driver/kvm/kvm.c         | 41 ---------------
+ libvmi/driver/kvm/kvm_common.c  | 92 +++------------------------------
+ libvmi/driver/kvm/kvm_private.h |  2 -
+ 3 files changed, 7 insertions(+), 128 deletions(-)
+
+diff --git a/libvmi/driver/kvm/kvm.c b/libvmi/driver/kvm/kvm.c
+index 255d106..2670f0b 100644
+--- a/libvmi/driver/kvm/kvm.c
++++ b/libvmi/driver/kvm/kvm.c
+@@ -415,20 +415,6 @@ kvm_init(
+         return VMI_FAILURE;
+     }
+ 
+-    if ( VMI_FAILURE == create_libvirt_wrapper(kvm) ) {
+-        g_free(kvm);
+-        return VMI_FAILURE;
+-    }
+-
+-    virConnectPtr conn = kvm->libvirt.virConnectOpenAuth("qemu:///system", kvm->libvirt.virConnectAuthPtrDefault, 0);
+-    if (NULL == conn) {
+-        dbprint(VMI_DEBUG_KVM, "--no connection to kvm hypervisor\n");
+-        g_free(kvm);
+-        return VMI_FAILURE;
+-    }
+-
+-    kvm->conn = conn;
+-
+     vmi->driver.driver_data = (void*)kvm;
+ 
+     return VMI_SUCCESS;
+@@ -461,16 +447,6 @@ kvm_close_vmi(vmi_instance_t vmi, kvm_instance_t *kvm)
+         kvm->libkvmi.kvmi_uninit(kvm->kvmi);
+         kvm->kvmi = NULL;
+     }
+-
+-    if (kvm->dom) {
+-        kvm->libvirt.virDomainFree(kvm->dom);
+-        kvm->dom = NULL;
+-    }
+-
+-    if (kvm->conn) {
+-        kvm->libvirt.virConnectClose(kvm->conn);
+-        kvm->conn = NULL;
+-    }
+ }
+ 
+ status_t
+@@ -503,21 +479,6 @@ kvm_init_vmi(
+     dbprint(VMI_DEBUG_KVM, "--KVMi socket path: %s\n", socket_path);
+ 
+     kvm_instance_t *kvm = kvm_get_instance(vmi);
+-    kvm->dom = kvm->libvirt.virDomainLookupByID(kvm->conn, kvm->id);
+-    if (NULL == kvm->dom) {
+-        dbprint(VMI_DEBUG_KVM, "--failed to find kvm domain\n");
+-        return VMI_FAILURE;
+-    }
+-
+-    // get the libvirt version
+-    unsigned long libVer = 0;
+-
+-    if (kvm->libvirt.virConnectGetLibVersion(kvm->conn, &libVer) != 0) {
+-        dbprint(VMI_DEBUG_KVM, "--failed to get libvirt version\n");
+-        goto err_exit;
+-    }
+-    dbprint(VMI_DEBUG_KVM, "--libvirt version %lu\n", libVer);
+-
+     vmi->vm_type = NORMAL;
+ 
+     // configure log cb before connecting
+@@ -570,8 +531,6 @@ kvm_destroy(
+         kvm_close_vmi(vmi, kvm);
+ 
+         dlclose(kvm->libkvmi.handle);
+-        dlclose(kvm->libvirt.handle);
+-        dlclose(kvm->libvirt.handle_qemu);
+         g_free(kvm);
+     }
+ }
+diff --git a/libvmi/driver/kvm/kvm_common.c b/libvmi/driver/kvm/kvm_common.c
+index 835b7b1..0c9cf6e 100644
+--- a/libvmi/driver/kvm/kvm_common.c
++++ b/libvmi/driver/kvm/kvm_common.c
+@@ -34,27 +34,8 @@ kvm_get_id_from_name(
+     vmi_instance_t vmi,
+     const char *name)
+ {
+-    virDomainPtr dom = NULL;
+-    uint64_t domainid = VMI_INVALID_DOMID;
+-    kvm_instance_t *kvm = kvm_get_instance(vmi);
+-
+-    dom = kvm->libvirt.virDomainLookupByName(kvm->conn, name);
+-    if (NULL == dom) {
+-        dbprint(VMI_DEBUG_KVM, "--failed to find kvm domain\n");
+-        domainid = VMI_INVALID_DOMID;
+-    } else {
+-
+-        domainid = (uint64_t) kvm->libvirt.virDomainGetID(dom);
+-        if (domainid == (uint64_t)-1) {
+-            dbprint(VMI_DEBUG_KVM, "--requested kvm domain may not be running\n");
+-            domainid = VMI_INVALID_DOMID;
+-        }
+-    }
+-
+-    if (dom)
+-        kvm->libvirt.virDomainFree(dom);
+-
+-    return domainid;
++    /* unused, just return something that is not an error. */
++    return 0;
+ }
+ 
+ status_t
+@@ -63,27 +44,9 @@ kvm_get_name_from_id(
+     uint64_t domainid,
+     char **name)
+ {
+-    virDomainPtr dom = NULL;
+-    const char* temp_name = NULL;
+     kvm_instance_t *kvm = kvm_get_instance(vmi);
+-
+-    dom = kvm->libvirt.virDomainLookupByID(kvm->conn, domainid);
+-    if (NULL == dom) {
+-        dbprint(VMI_DEBUG_KVM, "--failed to find kvm domain\n");
+-        return VMI_FAILURE;
+-    }
+-
+-    temp_name = kvm->libvirt.virDomainGetName(dom);
+-    *name = temp_name ? strdup(temp_name) : NULL;
+-
+-    if (dom)
+-        kvm->libvirt.virDomainFree(dom);
+-
+-    if (*name) {
+-        return VMI_SUCCESS;
+-    }
+-
+-    return VMI_FAILURE;
++    *name = strdup(kvm->name);
++    return VMI_SUCCESS;
+ }
+ 
+ uint64_t
+@@ -106,18 +69,6 @@ kvm_check_id(
+     vmi_instance_t vmi,
+     uint64_t domainid)
+ {
+-    virDomainPtr dom = NULL;
+-    kvm_instance_t *kvm = kvm_get_instance(vmi);
+-
+-    dom = kvm->libvirt.virDomainLookupByID(kvm->conn, domainid);
+-    if (NULL == dom) {
+-        dbprint(VMI_DEBUG_KVM, "--failed to find kvm domain\n");
+-        return VMI_FAILURE;
+-    }
+-
+-    if (dom)
+-        kvm->libvirt.virDomainFree(dom);
+-
+     return VMI_SUCCESS;
+ }
+ 
+@@ -127,17 +78,8 @@ kvm_get_name(
+     char **name)
+ {
+     kvm_instance_t *kvm = kvm_get_instance(vmi);
+-
+-    const char *tmpname = kvm->libvirt.virDomainGetName(kvm->dom);
+-
+-    // don't need to deallocate the name, it will go away with the domain object
+-
+-    if (NULL != tmpname) {
+-        *name = strdup(tmpname);
+-        return VMI_SUCCESS;
+-    } else {
+-        return VMI_FAILURE;
+-    }
++    *name = strdup(kvm->name);
++    return VMI_SUCCESS;
+ }
+ 
+ void
+@@ -190,25 +132,5 @@ kvm_test(
+         return VMI_FAILURE;
+     }
+ 
+-    if (name) {
+-        domainid = kvm_get_id_from_name(vmi, name);
+-        if (domainid != VMI_INVALID_DOMID) {
+-            kvm_destroy(vmi);
+-            return VMI_SUCCESS;
+-        }
+-    }
+-
+-    if (domainid != VMI_INVALID_DOMID) {
+-        char *_name = NULL;
+-        status_t rc = kvm_get_name_from_id(vmi, domainid, &_name);
+-        free(_name);
+-
+-        if ( VMI_SUCCESS == rc ) {
+-            kvm_destroy(vmi);
+-            return rc;
+-        }
+-    }
+-
+-    kvm_destroy(vmi);
+-    return VMI_FAILURE;
++    return VMI_SUCCESS;
+ }
+diff --git a/libvmi/driver/kvm/kvm_private.h b/libvmi/driver/kvm/kvm_private.h
+index aab96de..2e6e66e 100644
+--- a/libvmi/driver/kvm/kvm_private.h
++++ b/libvmi/driver/kvm/kvm_private.h
+@@ -42,8 +42,6 @@
+ #include "libvirt_wrapper.h"
+ 
+ typedef struct kvm_instance {
+-    virConnectPtr conn;
+-    virDomainPtr dom;
+     uint32_t id;
+     char *name;
+     char *ds_path;
+-- 
+2.20.1
+
