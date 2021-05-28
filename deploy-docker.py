@@ -14,4 +14,4 @@ with open("/var/lib/one/datastores/102/"+domainSplit[1]+"/vmi-docker/libvmi.conf
 
 os.chdir("/var/lib/one/datastores/102/"+domainSplit[1]+"/vmi-docker/")
 os.system("docker build -t "+domainId+" .")
-os.system("docker run --name "+domainId+" -dit -v /tmp/"+domainId+"/:/tmp/"+domainId+"/ "+domainId)
+os.system("docker run -p "+domainSplit[1]+":22 --name "+domainId+" -t -dit -v /tmp/"+domainId+"/:/tmp/"+domainId+"/ "+domainId)
