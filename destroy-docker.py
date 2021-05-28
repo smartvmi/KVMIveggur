@@ -10,8 +10,8 @@ domainId.replace("\n", "")
 domainSplit = domainId.split("-")
 
 os.system("rm -Rf /tmp/"+domainId)
-os.system("docker rm "+domainId)
-os.system("docker image rm "+domainId+" --force")
+os.system("docker rm "+domainId+" --force")
+os.system("docker image rm "+domainId+":latest --force")
 os.system("rm -Rf /var/lib/one/datastores/102/"+domainSplit[1]+"/vmi-docker/")
 
 with open("/tmp/test.txt", "a+") as f:
