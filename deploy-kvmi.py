@@ -6,6 +6,18 @@ import os
 
 xmlFile = argv[1]
 domainId = argv[2]
+vmDataStoreLocation = argv[3]
+
+deployDocker = False
+
+with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
+	for line in f:
+		try:
+			x = line.decode("utf-8")
+			if "DEPLOY_MONITOR_DOCKER" in x:
+				deployDocker = True
+		except Exception as e:
+			pass
 
 #with open("/tmp/test.txt", "a") as f:
 #	f.write("AAAAA")
@@ -52,10 +64,17 @@ devices.append(serial1)
 devices.append(console1)
 
 
-interface = devices.find("interface") #need to fix this if there is multiple interface?
-virtualport = ET.Element("virtualport")
-virtualport.set("type", "openvswitch")
-interface.append(virtualport)
+interfaces = devices.findall("interface")
+count = 0
+for i in interfaces:
+	if count == 0:
+		virtualport = ET.Element("virtualport")
+		virtualport.set("type", "openvswitch")
+		i.append(virtualport)
+	else:
+		if deployDocker:
+			devices.remove(i)
+	count += 1
 
 et.write(xmlFile,pretty_print=True)
 

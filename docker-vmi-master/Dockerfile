@@ -12,6 +12,7 @@ RUN cd /home/vmi && git clone https://github.com/libvmi/libvmi.git && \
 	mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local \
 	-DENABLE_KVM=ON -DENABLE_XEN=OFF -DENABLE_BAREFLANK=OFF -DENABLE_FILE=OFF \
 	-DENABLE_XENSTORE=OFF -DREKALL_PROFILES=OFF && make -j 8 && make install && ldconfig
-RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin without-password/' /etc/ssh/sshd_config
+RUN mkdir -p /root/.ssh
 WORKDIR /home/vmi
 CMD service ssh start && while true; do sleep 3000; done
