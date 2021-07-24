@@ -1,8 +1,11 @@
 #!/usr/bin/python3
-
+from __future__ import print_function
 from sys import argv
 import lxml.etree as ET
 import os
+import sys
+def eprint(*args, **kwargs):
+	print(*args, file=sys.stderr, **kwargs)
 
 xmlFile = argv[1]
 domainId = argv[2]
@@ -71,6 +74,21 @@ for i in interfaces:
 		virtualport = ET.Element("virtualport")
 		virtualport.set("type", "openvswitch")
 		i.append(virtualport)
+
+		# for non sis staff
+		source = i.find("source")
+		bridge = source.get("bridge")
+		tag = bridge.split(".")
+		#eprint(tag)
+		if(len(tag) > 1):
+			source.set("bridge", "ovsbr")
+			source.set("script", "vif-openvswitch-filtered")
+			vlan = ET.Element("vlan")
+			tagId = ET.Element("tag")
+			tagId.set("id", tag[1].split(",")[0])
+			vlan.append(tagId)
+			i.append(vlan)
+
 	else:
 		if deployDocker:
 			devices.remove(i)

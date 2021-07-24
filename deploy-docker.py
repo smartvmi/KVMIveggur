@@ -46,7 +46,13 @@ if deployDocker:
 	os.system("docker build -t "+domainId+" .")
 	#os.system("docker run -p "+ipAddress+":"+domainSplit[1]+":22 --name "+domainId+" -t -dit -v /tmp/"+domainId+"/:/tmp/"+domainId+"/ "+domainId)
 	#os.system("docker run -p "+domainSplit[1]+":22 --name "+domainId+" -t -dit -v /tmp/"+domainId+"/:/tmp/"+domainId+"/ "+domainId)
-	os.system("docker run --net=pub_net --ip="+ipAddress+" --name "+domainId+" -t -dit -v /tmp/"+domainId+"/:/tmp/"+domainId+"/ "+domainId)
+	netName = "sis-staff"
+	if ".12." in ipAddress:
+		netName = "sis-stud"
+	elif ".13." in ipAddress:
+		netName = "sis-csec"
+	
+	os.system("docker run --net="+netName+" --ip="+ipAddress+" --name "+domainId+" -t -dit -v /tmp/"+domainId+"/:/tmp/"+domainId+"/ "+domainId)
 
 	# with open("/tmp/test.txt", "a") as f:
 	# 	f.write("AAAAA\n")
