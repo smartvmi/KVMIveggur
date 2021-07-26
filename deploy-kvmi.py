@@ -119,6 +119,7 @@ if deployVSock:
 	address.set("bus", "0x00")
 	address.set("slot", "0x0b")
 	address.set("function", "0x0")
+	vsock.append(address)
 
 	devices.append(vsock)
 
