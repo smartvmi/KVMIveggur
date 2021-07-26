@@ -12,6 +12,7 @@ domainId = argv[2]
 vmDataStoreLocation = argv[3]
 
 deployDocker = False
+deployVSock = False
 
 with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
 	for line in f:
@@ -19,6 +20,8 @@ with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
 			x = line.decode("utf-8")
 			if "DEPLOY_MONITOR_DOCKER" in x:
 				deployDocker = True
+			if "DEPLOY_MONITOR_VSOCK" in x:
+				deployVSock = True
 		except Exception as e:
 			pass
 
@@ -93,6 +96,31 @@ for i in interfaces:
 		if deployDocker:
 			devices.remove(i)
 	count += 1
+
+if deployVSock:
+
+	portNo = str(domainId).split("-")[1]
+
+	vsock = ET.Element("vsock")
+	vsock.set("model", "virtio")
+	
+	cid = ET.Element("cid")
+	cid.set("auto", "no")
+	cid.set("address", str(portNo))
+	vsock.append(cid)
+
+	alias = ET.Element("alias")
+	alias.set("name", "vsock-"+str(portNo))
+	vsock.append(alias)
+
+	address = ET.Element("address")
+	address.set("type", "pci")
+	address.set("domain", "0x0000")
+	address.set("bus", "0x00")
+	address.set("slot", "0x0b")
+	address.set("function", "0x0")
+
+	devices.append(vsock)
 
 et.write(xmlFile,pretty_print=True)
 
