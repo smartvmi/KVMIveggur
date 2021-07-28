@@ -23,12 +23,11 @@ count=0
 
 deploy_id=$1
 
+sudo python3 /var/lib/one/destroy-docker.py $deploy_id
 shutdown_command="virsh --connect $LIBVIRT_URI shutdown $deploy_id"
 
 # Check if the domain is already shutdown
 virsh --connect $LIBVIRT_URI --readonly dominfo $deploy_id > /dev/null 2>&1 || exit 0
-
-python3 /var/lib/one/destroy-docker.py $deploy_id
 
 #If VM does not have ACPI enabled do not try to use it, destroy instead shutdown
 if [ "x$CANCEL_NO_ACPI" = "xyes" ]; then

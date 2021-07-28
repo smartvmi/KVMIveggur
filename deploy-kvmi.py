@@ -4,6 +4,8 @@ from sys import argv
 import lxml.etree as ET
 import os
 import sys
+import time
+
 def eprint(*args, **kwargs):
 	print(*args, file=sys.stderr, **kwargs)
 
@@ -13,17 +15,31 @@ vmDataStoreLocation = argv[3]
 
 deployDocker = False
 deployVSock = False
+targetVMVsock = ""
 
 with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
 	for line in f:
 		try:
 			x = line.decode("utf-8")
 			if "DEPLOY_MONITOR_DOCKER" in x:
+				eprint("DEPLOY_MONITOR_DOCKER detected")
 				deployDocker = True
 			if "DEPLOY_MONITOR_VSOCK" in x:
 				deployVSock = True
+				eprint("DEPLOY_MONITOR_VSOCK detected")
 		except Exception as e:
 			pass
+
+if deployVSock:
+	with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
+		for line in f:
+			try:
+				x = line.decode("utf-8")
+				if "VMI_TARGET=" in x:
+					targetVMVsock = x.replace("VMI_TARGET=", "").replace("'","").replace("\n","")
+					eprint("VMI_TARGET detected : " + str(targetVMVsock))
+			except Exception as e:
+				pass
 
 #with open("/tmp/test.txt", "a") as f:
 #	f.write("AAAAA")
