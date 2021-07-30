@@ -51,7 +51,7 @@ if [ "x$?" = "x0" ]; then
         virsh --connect $LIBVIRT_URI snapshot-create $DOMAIN_ID $SNAPSHOT_MD_XML --redefine > /dev/null || true
     done
 
-    sleep 120
+    #sleep 120
 
     sudo python3 /var/lib/one/deploy-vsock.py "one-${DOM_ID}" $DEP_FILE_LOCATION
 
