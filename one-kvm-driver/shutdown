@@ -23,7 +23,7 @@ count=0
 
 deploy_id=$1
 
-sudo python3 /var/lib/one/destroy-docker.py $deploy_id
+sudo python3 /var/lib/one/destroy-kvmi.py $deploy_id
 shutdown_command="virsh --connect $LIBVIRT_URI shutdown $deploy_id"
 
 # Check if the domain is already shutdown

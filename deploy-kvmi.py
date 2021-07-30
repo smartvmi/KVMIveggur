@@ -15,6 +15,7 @@ vmDataStoreLocation = argv[3]
 
 deployDocker = False
 deployVSock = False
+deployNetwork = False
 targetVMVsock = ""
 
 with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
@@ -27,19 +28,11 @@ with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
 			if "DEPLOY_MONITOR_VSOCK" in x:
 				deployVSock = True
 				eprint("DEPLOY_MONITOR_VSOCK detected")
+			if "MONITORING_IP" in x:
+				deployNetwork = True
+				eprint("MONITORING_IP detected")
 		except Exception as e:
 			pass
-
-if deployVSock:
-	with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
-		for line in f:
-			try:
-				x = line.decode("utf-8")
-				if "VMI_TARGET=" in x:
-					targetVMVsock = x.replace("VMI_TARGET=", "").replace("'","").replace("\n","")
-					eprint("VMI_TARGET detected : " + str(targetVMVsock))
-			except Exception as e:
-				pass
 
 #with open("/tmp/test.txt", "a") as f:
 #	f.write("AAAAA")
