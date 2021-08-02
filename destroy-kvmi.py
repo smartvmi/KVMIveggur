@@ -19,10 +19,13 @@ else:
 
 domainSplit = domainId.split("-")
 
-os.system("rm -Rf /tmp/"+domainId)
+# destroy docker
 os.system("docker rm "+domainId+" --force")
 os.system("docker image rm "+domainId+":latest --force")
 os.system("rm -Rf /var/lib/one/datastores/102/"+domainSplit[1]+"/vmi-docker/")
 
 # destroy vsock
-os.system("sudo kill -9 $(ps ax | grep socat | grep "+str(domainSplit[1])+" | awk '{print $1}')")
+os.system("sudo kill -9 $(ps ax | grep socat | grep "+str(domainSplit[1])+" | grep VSOCK-CONNECT | awk '{print $1}')")
+
+# destroy network
+os.system("sudo kill -9 $(ps ax | grep socat | grep "+str(domainId)+" | awk '{print $1}')")

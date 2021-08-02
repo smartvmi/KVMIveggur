@@ -10,12 +10,14 @@ import socket
 def eprint(*args, **kwargs):
 	print(*args, file=sys.stderr, **kwargs)
 
+# check whether the VM is up by probing SSH port (22)
 def ssh_port_check(ip):
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	result = sock.connect_ex((ip,22))
 	eprint("PORT RESULT : " + str(result))
 	sock.close()
 	return result
+
 
 domainId = argv[1]
 vmDataStoreLocation = argv[2]
@@ -24,6 +26,7 @@ deployNetwork = False
 targetNetwork = ""
 ipAddress = ""
 
+# recheck the network flag again
 with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
 	for line in f:
 		try:
@@ -36,11 +39,13 @@ with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
 		except Exception as e:
 			pass
 
-
+# forward UNIX socket to TCP socat to a particular target, the port number is this VM name one-XXXX
 if deployNetwork:
 	
 	while ssh_port_check(str(ipAddress)) != 0:
-		time.sleep(1)
+		time.sleep(5)
+
+	time.sleep(5)
 
 	portNo = str(domainId).split("-")[1]
 	cmd = "socat UNIX-LISTEN:/tmp/"+str(domainId)+"/vmi-sock,unlink-early TCP:"+str(targetNetwork)+":"+str(portNo)+",forever,keepalive,fork &"

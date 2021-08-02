@@ -9,14 +9,14 @@ import time
 def eprint(*args, **kwargs):
 	print(*args, file=sys.stderr, **kwargs)
 
-xmlFile = argv[1]
-domainId = argv[2]
-vmDataStoreLocation = argv[3]
+xmlFile = argv[1] #xml file location
+domainId = argv[2] #vm name
+vmDataStoreLocation = argv[3] #data store location to fetch openpenbula context (flags)
 
-deployDocker = False
-deployVSock = False
-deployNetwork = False
-targetVMVsock = ""
+isMonitor = False #check if monitor flag exist, no need to put the vmi stuff
+deployDocker = False #docker mode
+deployVSock = False #vsock mode
+deployNetwork = False #network mode
 
 with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
 	for line in f:
@@ -31,35 +31,37 @@ with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
 			if "MONITORING_IP" in x:
 				deployNetwork = True
 				eprint("MONITORING_IP detected")
+			if "KVMI_MONITOR" in x:
+				isMonitor = True
+				eprint("KVMI_MONITOR detected")
 		except Exception as e:
 			pass
-
-#with open("/tmp/test.txt", "a") as f:
-#	f.write("AAAAA")
-#	f.write(str(domainId))
 
 qemu_namespace = "{{http://libvirt.org/schemas/domain/qemu/1.0}}{0}"
 
 et = ET.parse(xmlFile, ET.XMLParser(strip_cdata=False,remove_blank_text=True))
 domain = et.getroot()[0].getparent()
 
-qemuCMDLine = ET.Element(qemu_namespace.format("commandline"));
+# add the vmi flag for non-monitor
+if not isMonitor:
+	qemuCMDLine = ET.Element(qemu_namespace.format("commandline"));
 
-qemuARG1 = ET.Element(qemu_namespace.format("arg"))
-qemuARG1.set("value", "-chardev")
-qemuARG2 = ET.Element(qemu_namespace.format("arg"))
-os.system("mkdir /tmp/"+str(domainId))
-qemuARG2.set("value", "socket,path=/tmp/"+str(domainId)+"/vmi-sock,id=chardev0,reconnect=10")
-qemuARG3 = ET.Element(qemu_namespace.format("arg"))
-qemuARG3.set("value", "-object")
-qemuARG4 = ET.Element(qemu_namespace.format("arg"))
-qemuARG4.set("value", "introspection,id=kvmi,chardev=chardev0")
-qemuCMDLine.append(qemuARG1)
-qemuCMDLine.append(qemuARG2)
-qemuCMDLine.append(qemuARG3)
-qemuCMDLine.append(qemuARG4)
-domain.append(qemuCMDLine)
+	qemuARG1 = ET.Element(qemu_namespace.format("arg"))
+	qemuARG1.set("value", "-chardev")
+	qemuARG2 = ET.Element(qemu_namespace.format("arg"))
+	os.system("mkdir /tmp/"+str(domainId))
+	qemuARG2.set("value", "socket,path=/tmp/"+str(domainId)+"/vmi-sock,id=chardev0,reconnect=10")
+	qemuARG3 = ET.Element(qemu_namespace.format("arg"))
+	qemuARG3.set("value", "-object")
+	qemuARG4 = ET.Element(qemu_namespace.format("arg"))
+	qemuARG4.set("value", "introspection,id=kvmi,chardev=chardev0")
+	qemuCMDLine.append(qemuARG1)
+	qemuCMDLine.append(qemuARG2)
+	qemuCMDLine.append(qemuARG3)
+	qemuCMDLine.append(qemuARG4)
+	domain.append(qemuCMDLine)
 
+# to enable serial console
 devices = domain.find("devices")
 
 serial1 = ET.Element("serial")
@@ -79,6 +81,7 @@ devices.append(serial1)
 devices.append(console1)
 
 
+# handle the openvswitch
 interfaces = devices.findall("interface")
 count = 0
 for i in interfaces:
@@ -91,7 +94,6 @@ for i in interfaces:
 		source = i.find("source")
 		bridge = source.get("bridge")
 		tag = bridge.split(".")
-		#eprint(tag)
 		if(len(tag) > 1):
 			source.set("bridge", "ovsbr")
 			source.set("script", "vif-openvswitch-filtered")
@@ -102,10 +104,11 @@ for i in interfaces:
 			i.append(vlan)
 
 	else:
-		if deployDocker:
+		if deployDocker: # docker use the second IP address, remove the second interface of the VM
 			devices.remove(i)
 	count += 1
 
+# vsock related
 if deployVSock:
 
 	portNo = str(domainId).split("-")[1]
@@ -132,15 +135,18 @@ if deployVSock:
 
 	devices.append(vsock)
 
+# write all changes to the xml file
 et.write(xmlFile,pretty_print=True)
 
-exist = False
+
+# append config to libvmi config file
+libVMIConfigExist = False
 
 with open("/etc/libvmi.conf") as f:
 	if str(domainId) in f.read():
-		exist = True
+		libVMIConfigExist = True
 
-if not exist:
+if not libVMIConfigExist:
 	config = str(domainId) + " {\n" + "\tostype = \"Linux\";\n" + "\tsysmap = \"/root/System.map.debian2\";\n" + "\tlinux_name = 0x670;\n" + "\tlinux_tasks = 0x3c8;\n" + "\tlinux_mm = 0x418;\n" + "\tlinux_pid = 0x4c8;\n" + "\tlinux_pgd = 0x50;\n" +"}\n"
 	with open("/etc/libvmi.conf", "a") as f:
 		f.write(config)
