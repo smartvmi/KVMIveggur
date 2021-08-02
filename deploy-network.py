@@ -48,7 +48,7 @@ if deployNetwork:
 	time.sleep(5)
 
 	portNo = str(domainId).split("-")[1]
-	cmd = "socat UNIX-LISTEN:/tmp/"+str(domainId)+"/vmi-sock,unlink-early TCP:"+str(targetNetwork)+":"+str(portNo)+",forever,keepalive,fork &"
+	cmd = "socat UNIX-LISTEN:/tmp/"+str(domainId)+"/vmi-sock,unlink-early,fork TCP:"+str(targetNetwork)+":"+str(portNo)+",fork,end-close &"
 	eprint("EXECUTING : " + str(cmd))
 	os.system(cmd)
 

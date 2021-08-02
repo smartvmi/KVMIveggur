@@ -57,7 +57,7 @@ if deployVSock:
 
 	time.sleep(5)
 
-	cmd = "socat UNIX-LISTEN:/tmp/one-"+str(targetVMVsock)+"/vmi-sock,unlink-early VSOCK-CONNECT:"+str(portNo)+":1,forever,keepalive,fork,reuseaddr &"
+	cmd = "socat UNIX-LISTEN:/tmp/one-"+str(targetVMVsock)+"/vmi-sock,unlink-early,fork VSOCK-CONNECT:"+str(portNo)+":1,fork &"
 	eprint("EXECUTING : " + str(cmd))
 	os.system(cmd)
 
