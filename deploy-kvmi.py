@@ -17,6 +17,8 @@ isMonitor = False #check if monitor flag exist, no need to put the vmi stuff
 deployDocker = False #docker mode
 deployVSock = False #vsock mode
 deployNetwork = False #network mode
+deployVSockTarget = False #is vsock target VM
+deployVSockMonitorVM = "" #vsock monitor VM
 
 with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
 	for line in f:
@@ -34,6 +36,10 @@ with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
 			if "KVMI_MONITOR" in x:
 				isMonitor = True
 				eprint("KVMI_MONITOR detected")
+			if "VMI_VSOCK_MONITORING" in x:
+				deployVSockTarget = True
+				deployVSockMonitorVM = x.replace("VMI_VSOCK_MONITORING=", "").replace("'","").replace("\n","")
+				eprint("VMI_VSOCK_MONITORING detected")
 		except Exception as e:
 			pass
 
@@ -50,7 +56,11 @@ if not isMonitor:
 	qemuARG1.set("value", "-chardev")
 	qemuARG2 = ET.Element(qemu_namespace.format("arg"))
 	os.system("mkdir /tmp/"+str(domainId))
-	qemuARG2.set("value", "socket,path=/tmp/"+str(domainId)+"/vmi-sock,id=chardev0,reconnect=10")
+	if deployVSockTarget:
+		portNo = str(domainId).split("-")[1]
+		qemuARG2.set("value", "socket,cid="+str(deployVSockMonitorVM)+",port="+str(portNo)+",id=chardev0,reconnect=10")
+	else:
+		qemuARG2.set("value", "socket,path=/tmp/"+str(domainId)+"/vmi-sock,id=chardev0,reconnect=10")
 	qemuARG3 = ET.Element(qemu_namespace.format("arg"))
 	qemuARG3.set("value", "-object")
 	qemuARG4 = ET.Element(qemu_namespace.format("arg"))
@@ -108,7 +118,7 @@ for i in interfaces:
 			devices.remove(i)
 	count += 1
 
-# vsock related
+# vsock monitoring related
 if deployVSock:
 
 	portNo = str(domainId).split("-")[1]

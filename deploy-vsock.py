@@ -26,43 +26,43 @@ deployVSock = False
 targetVMVsock = ""
 ipAddress = ""
 
-with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
-	for line in f:
-		try:
-			x = line.decode("utf-8")
-			if "DEPLOY_MONITOR_VSOCK" in x:
-				deployVSock = True
-		except Exception as e:
-			pass
+# with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
+# 	for line in f:
+# 		try:
+# 			x = line.decode("utf-8")
+# 			if "DEPLOY_MONITOR_VSOCK" in x:
+# 				deployVSock = True
+# 		except Exception as e:
+# 			pass
 
-if deployVSock:
-	with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
-		for line in f:
-			try:
-				x = line.decode("utf-8")
-				#fetch the machine target
-				if "VMI_TARGET=" in x:
-					targetVMVsock = x.replace("VMI_TARGET=", "").replace("'","").replace("\n","")
-					eprint("VMI_TARGET detected : " + str(targetVMVsock))
-				if "ETH0_IP=" in x:
-					ipAddress = x.replace("ETH0_IP=", "").replace("'","").replace("\n","")
-			except Exception as e:
-				pass
+# if deployVSock:
+# 	with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
+# 		for line in f:
+# 			try:
+# 				x = line.decode("utf-8")
+# 				#fetch the machine target
+# 				if "VMI_TARGET=" in x:
+# 					targetVMVsock = x.replace("VMI_TARGET=", "").replace("'","").replace("\n","")
+# 					eprint("VMI_TARGET detected : " + str(targetVMVsock))
+# 				if "ETH0_IP=" in x:
+# 					ipAddress = x.replace("ETH0_IP=", "").replace("'","").replace("\n","")
+# 			except Exception as e:
+# 				pass
 
 
-	portNo = str(domainId).split("-")[1]
+# 	portNo = str(domainId).split("-")[1]
 
-	while ssh_port_check(str(ipAddress)) != 0:
-		time.sleep(5)
+# 	while ssh_port_check(str(ipAddress)) != 0:
+# 		time.sleep(5)
 
-	time.sleep(5)
+# 	time.sleep(5)
 
-	cmd = "socat UNIX-LISTEN:/tmp/one-"+str(targetVMVsock)+"/vmi-sock,unlink-early,fork VSOCK-CONNECT:"+str(portNo)+":1,fork &"
-	eprint("EXECUTING : " + str(cmd))
-	os.system(cmd)
+# 	cmd = "socat UNIX-LISTEN:/tmp/one-"+str(targetVMVsock)+"/vmi-sock,unlink-early,fork VSOCK-CONNECT:"+str(portNo)+":1,fork &"
+# 	eprint("EXECUTING : " + str(cmd))
+# 	os.system(cmd)
 
-	time.sleep(1)
+# 	time.sleep(1)
 
-	cmd2 = "chmod 777 /tmp/one-"+str(targetVMVsock)+"/vmi-sock"
-	eprint("EXECUTING : " + str(cmd2))
-	os.system(cmd2)
+# 	cmd2 = "chmod 777 /tmp/one-"+str(targetVMVsock)+"/vmi-sock"
+# 	eprint("EXECUTING : " + str(cmd2))
+# 	os.system(cmd2)
