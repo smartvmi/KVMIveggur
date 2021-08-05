@@ -28,8 +28,6 @@ cat > $DEP_FILE
 
 DOM_ID=${DEP_FILE_LOCATION##*/}
 sudo python3 /var/lib/one/deploy-kvmi.py $DEP_FILE "one-${DOM_ID}" $DEP_FILE_LOCATION
-sudo python3 /var/lib/one/deploy-docker.py "one-${DOM_ID}" $DEP_FILE_LOCATION
-
 
 DATA=`virsh --connect $LIBVIRT_URI create $DEP_FILE`
 
@@ -52,7 +50,7 @@ if [ "x$?" = "x0" ]; then
     done
 
     #sleep 120
-
+    sudo python3 /var/lib/one/deploy-docker.py "one-${DOM_ID}" $DEP_FILE_LOCATION
     sudo python3 /var/lib/one/deploy-vsock.py "one-${DOM_ID}" $DEP_FILE_LOCATION
     sudo python3 /var/lib/one/deploy-network.py "one-${DOM_ID}" $DEP_FILE_LOCATION
 

@@ -1,5 +1,22 @@
-import os
+#!/usr/bin/python3
+from __future__ import print_function
 from sys import argv
+import lxml.etree as ET
+import os
+import sys
+import time
+import socket
+
+def eprint(*args, **kwargs):
+	print(*args, file=sys.stderr, **kwargs)
+
+# check whether the VM is up by probing SSH port (22)
+def ssh_port_check(ip):
+	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	result = sock.connect_ex((ip,22))
+	eprint("PORT RESULT : " + str(result))
+	sock.close()
+	return result
 
 domainId = argv[1]
 domainSplit = domainId.split("-")
@@ -7,6 +24,7 @@ vmDataStoreLocation = argv[2]
 
 deployDocker = False
 
+targetIpAddress = ""
 ipAddress = ""
 dns = ""
 gateway = ""
@@ -26,6 +44,9 @@ with open(str(vmDataStoreLocation)+"/disk.1", "rb") as f:
 				gateway = x.replace("ETH1_GATEWAY=", "").replace("'","").replace("\n","")
 			if "SSH_PUBLIC_KEY=" in x:
 				sshKey = x.replace("SSH_PUBLIC_KEY=", "").replace("'","").replace("\n","")
+			if "ETH0_IP=" in x:
+				targetIpAddress = x.replace("ETH0_IP=", "").replace("'","").replace("\n","")
+				eprint(str(targetIpAddress))
 		except Exception as e:
 			pass
 
@@ -50,5 +71,8 @@ if deployDocker:
 		netName = "sis-stud"
 	elif ".13." in ipAddress:
 		netName = "sis-csec"
-	
+
+	while ssh_port_check(str(targetIpAddress)) != 0:
+		time.sleep(1)
+
 	os.system("docker run --net="+netName+" --ip="+ipAddress+" --name "+domainId+" -t -dit -v /tmp/"+domainId+"/:/tmp/"+domainId+"/ "+domainId)
